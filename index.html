@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFL Week 8 Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .app-container {
+            max-width: 428px;
+            margin: 0 auto;
+            background: #000000;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .header {
+            background: linear-gradient(180deg, #1c1c1e 0%, #000000 100%);
+            padding: 50px 20px 20px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 0.5px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            font-size: 15px;
+            color: rgba(255,255,255,0.6);
+            font-weight: 500;
+        }
+        
+        .games-scroll {
+            padding: 16px 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .games-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .games-list {
+            display: flex;
+            gap: 12px;
+            padding: 0 20px;
+        }
+        
+        .game-card {
+            background: #1c1c1e;
+            border-radius: 16px;
+            padding: 14px;
+            min-width: 200px;
+            flex-shrink: 0;
+            border: 1.5px solid rgba(255,255,255,0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .game-card.active {
+            background: linear-gradient(135deg, #0066ff 0%, #0040dd 100%);
+            border-color: #0066ff;
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 102, 255, 0.4);
+        }
+        
+        .game-card-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .team-logo-small {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .vs-small {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .game-card-info {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 500;
+        }
+        
+        .detail-section {
+            padding: 20px;
+            display: none;
+        }
+        
+        .detail-section.active {
+            display: block;
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .matchup-card {
+            background: #1c1c1e;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .matchup-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .team-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .team-logo-large {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        }
+        
+        .team-name-large {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        
+        .team-record-large {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+        }
+        
+        .vs-large {
+            font-size: 20px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.3);
+        }
+        
+        .betting-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .betting-item {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .betting-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        
+        .betting-value {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+            padding: 0 0 8px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .stat-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0066ff;
+            margin-bottom: 12px;
+            letter-spacing: -0.2px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+        
+        .chart-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.2px;
+        }
+        
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+        
+        .key-matchup-card {
+            background: linear-gradient(135deg, rgba(0, 102, 255, 0.15) 0%, rgba(0, 64, 221, 0.15) 100%);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(0, 102, 255, 0.3);
+        }
+        
+        .key-matchup-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0066ff;
+            margin-bottom: 8px;
+            letter-spacing: -0.2px;
+        }
+        
+        .key-matchup-text {
+            font-size: 14px;
+            line-height: 1.5;
+            color: rgba(255,255,255,0.8);
+            font-weight: 500;
+        }
+        
+        .prediction-card {
+            background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(52, 199, 89, 0.3);
+        }
+        
+        .prediction-title {
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .prediction-scores {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 16px;
+        }
+        
+        .prediction-team {
+            text-align: center;
+        }
+        
+        .prediction-team-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+        
+        .prediction-team-score {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        
+        .prediction-divider {
+            font-size: 28px;
+            font-weight: 700;
+            opacity: 0.7;
+        }
+        
+        .prediction-pick {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: -0.1px;
+        }
+        
+        .day-divider {
+            padding: 16px 20px 8px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .bottom-spacer {
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🏈 Week 8</h1>
+            <p>October 23-27, 2025</p>
+        </div>
+
+        <div class="day-divider">Thursday Night</div>
+        <div class="games-scroll">
+            <div class="games-list" id="thursday-games"></div>
+        </div>
+
+        <div class="day-divider">Sunday</div>
+        <div class="games-scroll">
+            <div class="games-list" id="sunday-games"></div>
+        </div>
+
+        <div class="day-divider">Monday Night</div>
+        <div class="games-scroll">
+            <div class="games-list" id="monday-games"></div>
+        </div>
+
+        <div id="detail-container"></div>
+        
+        <div class="bottom-spacer"></div>
+    </div>
+
+    <script>
+        const games = [
+            {
+                id: 1,
+                day: 'thursday',
+                away: { name: 'Vikings', abbr: 'MIN', record: '3-3', color: '#4F2683', textColor: '#FFC62F' },
+                home: { name: 'Chargers', abbr: 'LAC', record: '4-3', color: '#0080C6', textColor: '#FFC20E' },
+                time: 'Thu 8:15 PM',
+                spread: 'LAC -3',
+                ou: '48.5',
+                awayStats: { ppg: '24.2 (11th)', passYPG: '251 (10th)', rushYPG: '112 (17th)', toMargin: '+3' },
+                homeStats: { ppgAllow: '19.8 (8th)', sacks: '21 (11th)', ints: '8 (T-7th)', passDef: '225 YPG' },
+                keyMatchup: 'Herbert vs MIN secondary. Chargers QB averaging 278 YPG. Vikings allow 242 pass YPG (18th).',
+                prediction: { away: 23, home: 27, pick: 'Chargers -3', confidence: '74%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Pass YPG', 'Rush YPG'], away: [24.2, 251, 112], home: [26.1, 278, 106] },
+                    chart2: { labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'], away: [28, 23, 31, 16, 23, 20, 28], home: [22, 26, 27, 17, 24, 10, 20] }
+                }
+            },
+            {
+                id: 2,
+                day: 'sunday',
+                away: { name: 'Dolphins', abbr: 'MIA', record: '3-4', color: '#008E97', textColor: '#FC4C02' },
+                home: { name: 'Falcons', abbr: 'ATL', record: '4-3', color: '#A71930', textColor: 'black' },
+                time: 'Sun 1:00 PM',
+                spread: 'ATL -2.5',
+                ou: '46.5',
+                awayStats: { ppg: '21.7 (17th)', rushYPG: '107 (21st)', thirdDown: '38.2%', toMargin: '+1' },
+                homeStats: { ppg: '25.3 (8th)', passYPG: '268 (6th)', redZone: '58.3%', toMargin: '+3' },
+                keyMatchup: 'Cousins vs MIA pass rush. ATL QB has 15 TDs, 4 INTs. Dolphins have 19 sacks.',
+                prediction: { away: 20, home: 24, pick: 'Falcons -2.5', confidence: '68%' },
+                chartData: {
+                    chart1: { labels: ['Total Off', 'Pass', 'Rush'], away: [352, 245, 107], home: [393, 268, 125] },
+                    chart2: { labels: ['MIA 3rd Down', 'ATL 3rd Down'], away: [38.2], home: [42.1] }
+                }
+            },
+            {
+                id: 3,
+                day: 'sunday',
+                away: { name: 'Jets', abbr: 'NYJ', record: '2-5', color: '#125740', textColor: 'white' },
+                home: { name: 'Bengals', abbr: 'CIN', record: '4-3', color: '#FB4F14', textColor: 'black' },
+                time: 'Sun 1:00 PM',
+                spread: 'CIN -5.5',
+                ou: '44.5',
+                awayStats: { ppg: '18.4 (27th)', toMargin: '-4', sacksAllow: '23', totalYPG: '319' },
+                homeStats: { ppg: '26.8 (6th)', passYPG: '289 (2nd)', burrowTDs: '18', toMargin: '+5' },
+                keyMatchup: 'Burrow vs NYJ secondary. Bengals QB throwing 18 TDs. Jets allow 248 pass YPG (21st).',
+                prediction: { away: 17, home: 28, pick: 'Bengals -5.5', confidence: '80%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Pass YPG'], away: [18.4, 212], home: [26.8, 289] },
+                    chart2: { labels: ['TO Margin'], away: [-4], home: [5] }
+                }
+            },
+            {
+                id: 4,
+                day: 'sunday',
+                away: { name: 'Browns', abbr: 'CLE', record: '1-6', color: '#311D00', textColor: '#FF3C00' },
+                home: { name: 'Patriots', abbr: 'NE', record: '5-2', color: '#002244', textColor: '#C60C30' },
+                time: 'Sun 1:00 PM',
+                spread: 'NE -7',
+                ou: '41.5',
+                awayStats: { ppg: '15.2 (31st)', toMargin: '-7', totalYPG: '298', rushYPG: '89' },
+                homeStats: { ppg: '24.1 (13th)', ppgAllow: '18.7 (5th)', toMargin: '+5', sacks: '23' },
+                keyMatchup: 'NE defense vs CLE offense. Patriots 5th in scoring defense. Browns 31st in scoring.',
+                prediction: { away: 13, home: 24, pick: 'Patriots -7', confidence: '82%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Total YPG'], away: [15.2, 298], home: [24.1, 365] },
+                    chart2: { labels: ['TO Margin'], away: [-7], home: [5] }
+                }
+            },
+            {
+                id: 5,
+                day: 'sunday',
+                away: { name: 'Giants', abbr: 'NYG', record: '2-5', color: '#0B2265', textColor: '#A71930' },
+                home: { name: 'Eagles', abbr: 'PHI', record: '5-2', color: '#004C54', textColor: 'white' },
+                time: 'Sun 1:00 PM',
+                spread: 'PHI -10',
+                ou: '44.5',
+                awayStats: { ppg: '17.1 (28th)', sacksAllow: '26', rushYPG: '94 (28th)', toMargin: '-3' },
+                homeStats: { ppg: '28.7 (4th)', rushYPG: '162 (1st)', saquonYPG: '128', toMargin: '+7' },
+                keyMatchup: 'Barkley vs NYG defense. Leading NFL with 897 rush yards vs former team.',
+                prediction: { away: 14, home: 31, pick: 'Eagles -10', confidence: '85%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Rush YPG'], away: [17.1, 94], home: [28.7, 162] },
+                    chart2: { labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'], away: [15, 18, 21, 20, 7, 14, 22], home: [34, 13, 15, 33, 20, 28, 37] }
+                }
+            },
+            {
+                id: 6,
+                day: 'sunday',
+                away: { name: 'Bills', abbr: 'BUF', record: '4-2', color: '#00338D', textColor: '#C60C30' },
+                home: { name: 'Panthers', abbr: 'CAR', record: '4-3', color: '#0085CA', textColor: 'black' },
+                time: 'Sun 1:00 PM',
+                spread: 'BUF -4.5',
+                ou: '47.5',
+                awayStats: { ppg: '29.1 (3rd)', allenTDs: '20 Total', sacks: '31 (1st)', totalYPG: '408' },
+                homeStats: { ppg: '23.8 (14th)', ppgAllow: '24.3', rushDef: '122 YPG', toMargin: '+2' },
+                keyMatchup: 'Josh Allen vs CAR defense. Bills QB leads NFL in total TDs (20). Panthers allow 24.3 PPG.',
+                prediction: { away: 30, home: 24, pick: 'Bills -4.5', confidence: '76%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Total YPG'], away: [29.1, 408], home: [23.8, 347] },
+                    chart2: { labels: ['BUF Sacks', 'CAR Sacks'], away: [31], home: [18] }
+                }
+            },
+            {
+                id: 7,
+                day: 'sunday',
+                away: { name: 'Bears', abbr: 'CHI', record: '5-2', color: '#0B162A', textColor: '#C83803' },
+                home: { name: 'Ravens', abbr: 'BAL', record: '3-4', color: '#241773', textColor: '#9E7C0C' },
+                time: 'Sun 1:00 PM',
+                spread: 'BAL -3',
+                ou: '50.5',
+                awayStats: { ppg: '25.4 (9th)', ppgAllow: '20.1 (9th)', toMargin: '+6', rushYPG: '124' },
+                homeStats: { ppg: '28.2 (5th)', rushYPG: '171 (2nd)', lamarRush: '487 yds', toMargin: '-1' },
+                keyMatchup: 'Lamar Jackson vs CHI run defense. Ravens QB has 487 rush yards. Bears allow 118 YPG (13th).',
+                prediction: { away: 24, home: 27, pick: 'Over 50.5', confidence: '72%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Rush YPG'], away: [25.4, 124], home: [28.2, 171] },
+                    chart2: { labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'], away: [17, 19, 36, 24, 21, 35, 26], home: [10, 23, 28, 35, 41, 23, 38] }
+                }
+            },
+            {
+                id: 8,
+                day: 'sunday',
+                away: { name: '49ers', abbr: 'SF', record: '3-4', color: '#AA0000', textColor: '#B3995D' },
+                home: { name: 'Texans', abbr: 'HOU', record: '5-2', color: '#03202F', textColor: '#A71930' },
+                time: 'Sun 1:00 PM',
+                spread: 'HOU -1.5',
+                ou: '45.5',
+                awayStats: { ppg: '23.8 (12th)', passYPG: '247 (12th)', redZone: '55.2%', sacks: '24' },
+                homeStats: { ppg: '25.1 (10th)', ppgAllow: '20.4 (10th)', sacks: '27 (3rd)', toMargin: '+4' },
+                keyMatchup: 'Stroud vs SF pass rush. Texans QB has 13 TDs. 49ers have 24 sacks (7th).',
+                prediction: { away: 21, home: 24, pick: 'Texans -1.5', confidence: '65%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Total YPG'], away: [23.8, 368], home: [25.1, 352] },
+                    chart2: { labels: ['SF Sacks', 'HOU Sacks'], away: [24], home: [27] }
+                }
+            },
+            {
+                id: 9,
+                day: 'sunday',
+                away: { name: 'Buccaneers', abbr: 'TB', record: '4-3', color: '#D50A0A', textColor: '#34302B' },
+                home: { name: 'Saints', abbr: 'NO', record: '2-5', color: '#D3BC8D', textColor: 'black' },
+                time: 'Sun 4:05 PM',
+                spread: 'TB -3.5',
+                ou: '43.5',
+                awayStats: { ppg: '24.7 (10th)', bakerTDs: '16', passYPG: '264 (8th)', toMargin: '+4' },
+                homeStats: { ppg: '19.4 (23rd)', ppgAllow: '27.3 (26th)', toMargin: '-5', passAllow: '261' },
+                keyMatchup: 'Baker Mayfield vs NO secondary. TB QB has 16 TDs. Saints allow 261 pass YPG (25th).',
+                prediction: { away: 27, home: 20, pick: 'Bucs -3.5', confidence: '75%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Pass YPG'], away: [24.7, 264], home: [19.4, 223] },
+                    chart2: { labels: ['TO Margin'], away: [4], home: [-5] }
+                }
+            },
+            {
+                id: 10,
+                day: 'sunday',
+                away: { name: 'Cowboys', abbr: 'DAL', record: '3-3-1', color: '#041E42', textColor: '#869397' },
+                home: { name: 'Broncos', abbr: 'DEN', record: '5-2', color: '#FB4F14', textColor: '#002244' },
+                time: 'Sun 4:25 PM',
+                spread: 'DEN -4',
+                ou: '46.5',
+                awayStats: { ppg: '22.8 (16th)', rushYPG: '103 (23rd)', toMargin: '-2', sacks: '18' },
+                homeStats: { ppg: '24.3 (11th)', ppgAllow: '17.6 (3rd)', sacks: '26 (5th)', toMargin: '+5' },
+                keyMatchup: 'DEN defense vs DAL offense. Broncos 3rd in scoring defense (17.6 PPG). Mile High advantage.',
+                prediction: { away: 20, home: 27, pick: 'Broncos -4', confidence: '78%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'PPG Allow'], away: [22.8, 23.4], home: [24.3, 17.6] },
+                    chart2: { labels: ['DAL Sacks', 'DEN Sacks'], away: [18], home: [26] }
+                }
+            },
+            {
+                id: 11,
+                day: 'sunday',
+                away: { name: 'Titans', abbr: 'TEN', record: '1-6', color: '#0C2340', textColor: '#4B92DB' },
+                home: { name: 'Colts', abbr: 'IND', record: '6-1', color: '#002C5F', textColor: 'white' },
+                time: 'Sun 4:25 PM',
+                spread: 'IND -8.5',
+                ou: '44.5',
+                awayStats: { ppg: '16.8 (30th)', toMargin: '-8', totalYPG: '291', passYPG: '201' },
+                homeStats: { ppg: '27.9 (4th)', passYPG: '271 (5th)', toMargin: '+9', rushYPG: '127' },
+                keyMatchup: 'Daniel Jones vs TEN defense. Colts QB rolling with 6-1 record and +9 TO margin.',
+                prediction: { away: 17, home: 31, pick: 'Colts -8.5', confidence: '83%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Total YPG'], away: [16.8, 291], home: [27.9, 398] },
+                    chart2: { labels: ['TO Margin'], away: [-8], home: [9] }
+                }
+            },
+            {
+                id: 12,
+                day: 'sunday',
+                away: { name: 'Packers', abbr: 'GB', record: '4-1-1', color: '#203731', textColor: '#FFB612' },
+                home: { name: 'Steelers', abbr: 'PIT', record: '4-2', color: '#FFB612', textColor: 'black' },
+                time: 'Sun 8:20 PM',
+                spread: 'PIT -2.5',
+                ou: '45.5',
+                awayStats: { ppg: '26.3 (7th)', loveTDs: '14', passYPG: '256 (9th)', toMargin: '+5' },
+                homeStats: { ppg: '22.1 (18th)', ppgAllow: '19.1 (7th)', rodgersTDs: '13', sacks: '25' },
+                keyMatchup: 'Rodgers vs former team! First time facing Packers. Love vs PIT defense (7th in PPG allowed).',
+                prediction: { away: 24, home: 23, pick: 'Packers +2.5', confidence: '62%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Pass YPG'], away: [26.3, 256], home: [22.1, 227] },
+                    chart2: { labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'], away: [34, 16, 30, 29, 24, 20], home: [18, 13, 20, 27, 32, 15] }
+                }
+            },
+            {
+                id: 13,
+                day: 'monday',
+                away: { name: 'Commanders', abbr: 'WAS', record: '3-4', color: '#773141', textColor: '#FFB612' },
+                home: { name: 'Chiefs', abbr: 'KC', record: '4-3', color: '#E31837', textColor: 'white' },
+                time: 'Mon 8:15 PM',
+                spread: 'KC -6.5',
+                ou: '48.5',
+                awayStats: { ppg: '24.1 (11th)', danielsRush: '312 yds', passYPG: '243', toMargin: '+2' },
+                homeStats: { ppg: '27.4 (5th)', mahomesTDs: '15', toMargin: '+8', passYPG: '268' },
+                keyMatchup: 'Rookie Jayden Daniels vs Mahomes. Chiefs rolling with 2-game win streak. Arrowhead advantage.',
+                prediction: { away: 23, home: 30, pick: 'Chiefs -6.5', confidence: '77%' },
+                chartData: {
+                    chart1: { labels: ['PPG', 'Total YPG'], away: [24.1, 361], home: [27.4, 387] },
+                    chart2: { labels: ['TO Margin'], away: [2], home: [8] }
+                }
+            }
+        ];
+
+        let currentChart1 = null;
+        let currentChart2 = null;
+        let activeGameId = null;
+
+        function renderGameCards() {
+            const thursdayContainer = document.getElementById('thursday-games');
+            const sundayContainer = document.getElementById('sunday-games');
+            const mondayContainer = document.getElementById('monday-games');
+
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                card.onclick = () => selectGame(game.id);
+                
+                card.innerHTML = `
+                    <div class="game-card-teams">
+                        <div class="team-logo-small" style="background: ${game.away.color}; color: ${game.away.textColor};">
+                            ${game.away.abbr}
+                        </div>
+                        <div class="vs-small">@</div>
+                        <div class="team-logo-small" style="background: ${game.home.color}; color: ${game.home.textColor};">
+                            ${game.home.abbr}
+                        </div>
+                    </div>
+                    <div class="game-card-info">${game.time}</div>
+                `;
+                
+                if (game.day === 'thursday') {
+                    thursdayContainer.appendChild(card);
+                } else if (game.day === 'sunday') {
+                    sundayContainer.appendChild(card);
+                } else {
+                    mondayContainer.appendChild(card);
+                }
+            });
+        }
+
+        function selectGame(gameId) {
+            const game = games.find(g => g.id === gameId);
+            if (!game) return;
+
+            activeGameId = gameId;
+            
+            document.querySelectorAll('.game-card').forEach((card, idx) => {
+                card.classList.remove('active');
+                if (games[idx].id === gameId) {
+                    card.classList.add('active');
+                }
+            });
+
+            renderGameDetails(game);
+            
+            setTimeout(() => {
+                const detailSection = document.querySelector('.detail-section');
+                if (detailSection) {
+                    detailSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+        }
+
+        function renderGameDetails(game) {
+            const container = document.getElementById('detail-container');
+            
+            container.innerHTML = `
+                <div class="detail-section active">
+                    <div class="matchup-card">
+                        <div class="matchup-teams">
+                            <div class="team-display">
+                                <div class="team-logo-large" style="background: ${game.away.color}; color: ${game.away.textColor};">
+                                    ${game.away.abbr}
+                                </div>
+                                <div class="team-name-large">${game.away.name}</div>
+                                <div class="team-record-large">${game.away.record}</div>
+                            </div>
+                            <div class="vs-large">@</div>
+                            <div class="team-display">
+                                <div class="team-logo-large" style="background: ${game.home.color}; color: ${game.home.textColor};">
+                                    ${game.home.abbr}
+                                </div>
+                                <div class="team-name-large">${game.home.name}</div>
+                                <div class="team-record-large">${game.home.record}</div>
+                            </div>
+                        </div>
+
+                        <div class="betting-grid">
+                            <div class="betting-item">
+                                <div class="betting-label">Spread</div>
+                                <div class="betting-value">${game.spread}</div>
+                            </div>
+                            <div class="betting-item">
+                                <div class="betting-label">O/U</div>
+                                <div class="betting-value">${game.ou}</div>
+                            </div>
+                            <div class="betting-item">
+                                <div class="betting-label">Time</div>
+                                <div class="betting-value">${game.time.split(' ')[1]}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Team Statistics</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-title">${game.away.name}</div>
+                            ${Object.entries(game.awayStats).map(([key, value]) => `
+                                <div class="stat-item">
+                                    <div class="stat-label">${formatStatLabel(key)}</div>
+                                    <div class="stat-value">${value}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-title">${game.home.name}</div>
+                            ${Object.entries(game.homeStats).map(([key, value]) => `
+                                <div class="stat-item">
+                                    <div class="stat-label">${formatStatLabel(key)}</div>
+                                    <div class="stat-value">${value}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="section-title">Data Analysis</div>
+                    <div class="chart-card">
+                        <div class="chart-title">Statistical Comparison</div>
+                        <div class="chart-container">
+                            <canvas id="chart-1"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-title">Performance Trends</div>
+                        <div class="chart-container">
+                            <canvas id="chart-2"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="key-matchup-card">
+                        <div class="key-matchup-title">🔥 Key Matchup</div>
+                        <div class="key-matchup-text">${game.keyMatchup}</div>
+                    </div>
+
+                    <div class="prediction-card">
+                        <div class="prediction-title">⚡ Expert Prediction</div>
+                        <div class="prediction-scores">
+                            <div class="prediction-team">
+                                <div class="prediction-team-name">${game.away.abbr}</div>
+                                <div class="prediction-team-score">${game.prediction.away}</div>
+                            </div>
+                            <div class="prediction-divider">-</div>
+                            <div class="prediction-team">
+                                <div class="prediction-team-name">${game.home.abbr}</div>
+                                <div class="prediction-team-score">${game.prediction.home}</div>
+                            </div>
+                        </div>
+                        <div class="prediction-pick">
+                            ✅ ${game.prediction.pick} • ${game.prediction.confidence} Confidence
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            createCharts(game);
+        }
+
+        function formatStatLabel(key) {
+            const labels = {
+                ppg: 'PPG', passYPG: 'Pass YPG', rushYPG: 'Rush YPG', toMargin: 'TO Margin',
+                ppgAllow: 'PPG Allow', sacks: 'Sacks', ints: 'INTs', passDef: 'Pass Def',
+                thirdDown: '3rd Down', redZone: 'Red Zone', sacksAllow: 'Sacks Allow',
+                totalYPG: 'Total YPG', burrowTDs: 'Burrow TDs', allenTDs: 'Allen TDs',
+                rushDef: 'Rush Def', lamarRush: 'Lamar Rush', saquonYPG: 'Saquon YPG',
+                bakerTDs: 'Baker TDs', passAllow: 'Pass Allow', loveTDs: 'Love TDs',
+                rodgersTDs: 'Rodgers TDs', danielsRush: 'Daniels Rush', mahomesTDs: 'Mahomes TDs'
+            };
+            return labels[key] || key;
+        }
+
+        function createCharts(game) {
+            if (currentChart1) currentChart1.destroy();
+            if (currentChart2) currentChart2.destroy();
+
+            const ctx1 = document.getElementById('chart-1').getContext('2d');
+            const ctx2 = document.getElementById('chart-2').getContext('2d');
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(255,255,255,0.8)',
+                            font: { size: 11, weight: '600' },
+                            padding: 12,
+                            usePointStyle: true
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { 
+                            color: 'rgba(255,255,255,0.5)', 
+                            font: { size: 10 } 
+                        },
+                        grid: { 
+                            color: 'rgba(255,255,255,0.05)',
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        ticks: { 
+                            color: 'rgba(255,255,255,0.5)', 
+                            font: { size: 10 } 
+                        },
+                        grid: { 
+                            color: 'rgba(255,255,255,0.05)',
+                            drawBorder: false
+                        }
+                    }
+                }
+            };
+
+            if (game.chartData.chart2.labels.length > 5) {
+                currentChart1 = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: game.chartData.chart1.labels,
+                        datasets: [{
+                            label: game.away.abbr,
+                            data: game.chartData.chart1.away,
+                            backgroundColor: game.away.color + 'DD',
+                            borderRadius: 6
+                        }, {
+                            label: game.home.abbr,
+                            data: game.chartData.chart1.home,
+                            backgroundColor: game.home.color + 'DD',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                currentChart2 = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: game.chartData.chart2.labels,
+                        datasets: [{
+                            label: game.away.abbr,
+                            data: game.chartData.chart2.away,
+                            borderColor: game.away.color,
+                            backgroundColor: game.away.color + '30',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }, {
+                            label: game.home.abbr,
+                            data: game.chartData.chart2.home,
+                            borderColor: game.home.color,
+                            backgroundColor: game.home.color + '30',
+                            borderWidth: 2.5,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }]
+                    },
+                    options: chartOptions
+                });
+            } else if (game.chartData.chart2.labels.length === 2 && game.chartData.chart2.away.length === 1) {
+                currentChart1 = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: game.chartData.chart1.labels,
+                        datasets: [{
+                            label: game.away.abbr,
+                            data: game.chartData.chart1.away,
+                            backgroundColor: game.away.color + 'DD',
+                            borderRadius: 6
+                        }, {
+                            label: game.home.abbr,
+                            data: game.chartData.chart1.home,
+                            backgroundColor: game.home.color + 'DD',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                currentChart2 = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: game.chartData.chart2.labels,
+                        datasets: [{
+                            data: [game.chartData.chart2.away[0], game.chartData.chart2.home[0]],
+                            backgroundColor: [game.away.color + 'DD', game.home.color + 'DD'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgba(255,255,255,0.8)',
+                                    font: { size: 11, weight: '600' },
+                                    padding: 12
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                currentChart1 = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: game.chartData.chart1.labels,
+                        datasets: [{
+                            label: game.away.abbr,
+                            data: game.chartData.chart1.away,
+                            backgroundColor: game.away.color + 'DD',
+                            borderRadius: 6
+                        }, {
+                            label: game.home.abbr,
+                            data: game.chartData.chart1.home,
+                            backgroundColor: game.home.color + 'DD',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                currentChart2 = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: game.chartData.chart2.labels,
+                        datasets: [{
+                            label: game.away.abbr,
+                            data: game.chartData.chart2.away,
+                            backgroundColor: game.chartData.chart2.away[0] < 0 ? '#ff453aDD' : '#32d74bDD',
+                            borderRadius: 6
+                        }, {
+                            label: game.home.abbr,
+                            data: game.chartData.chart2.home,
+                            backgroundColor: game.chartData.chart2.home[0] < 0 ? '#ff453aDD' : '#32d74bDD',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+        }
+
+        renderGameCards();
+        selectGame(1);
+    </script>
+</body>
+</html>
